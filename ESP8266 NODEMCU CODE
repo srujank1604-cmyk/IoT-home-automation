@@ -1,0 +1,102 @@
+#include <ESP8266WiFi.h>
+#include <Firebase_ESP_Client.h>
+
+/* ------------ WIFI ------------ */
+#define WIFI_SSID "SUFI"
+#define WIFI_PASSWORD "123456789"
+
+/* ------------ FIREBASE ------------ */
+#define API_KEY "AIzaSyDUzRvCsdthajO9TDwN0ntjNGUl6l8jtEM"
+#define DATABASE_URL "https://smarthomeautomation-cb002-default-rtdb.firebaseio.com/"
+
+/* ------------ PINS ------------ */
+#define LED_PIN     D2
+#define RELAY_PIN   D1    // Relay via BC548 transistor
+#define BUZZER_PIN  D6
+
+FirebaseData fbdo;
+FirebaseAuth auth;
+FirebaseConfig config;
+
+bool signupOK = false;
+
+/* ------------ SETUP ------------ */
+void setup() {
+
+  Serial.begin(115200);
+
+  pinMode(LED_PIN, OUTPUT);
+  pinMode(RELAY_PIN, OUTPUT);
+  pinMode(BUZZER_PIN, OUTPUT);
+
+  // Default OFF states (IMPORTANT)
+  digitalWrite(LED_PIN, LOW);
+  digitalWrite(RELAY_PIN, LOW);     // relay OFF
+  digitalWrite(BUZZER_PIN, LOW);
+
+  /* WiFi */
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  Serial.print("Connecting to WiFi");
+
+  while (WiFi.status() != WL_CONNECTED) {
+    Serial.print(".");
+    delay(500);
+  }
+
+  Serial.println("\nWiFi Connected!");
+  Serial.println(WiFi.localIP());
+
+  /* Firebase */
+  config.api_key = API_KEY;
+  config.database_url = DATABASE_URL;
+
+  Firebase.begin(&config, &auth);
+  Firebase.reconnectWiFi(true);
+
+  if (Firebase.signUp(&config, &auth, "", "")) {
+    Serial.println("Firebase Connected");
+    signupOK = true;
+  } else {
+    Serial.println("Firebase Failed");
+  }
+}
+
+/* ------------ LOOP ------------ */
+void loop() {
+
+  if (!signupOK) return;
+
+  // -------- LED --------
+  if (Firebase.RTDB.getInt(&fbdo, "/SmartHome/device1State")) {
+    int ledState = fbdo.intData();
+    digitalWrite(LED_PIN, ledState);
+
+    Firebase.RTDB.setString(&fbdo,
+      "/SmartHome/feedback/device1",
+      ledState ? "ON" : "OFF");
+  }
+
+  // -------- FAN / RELAY --------
+  if (Firebase.RTDB.getInt(&fbdo, "/SmartHome/device2State")) {
+    int relayState = fbdo.intData();
+
+    // Normal logic (ON = HIGH, OFF = LOW)
+    digitalWrite(RELAY_PIN, relayState);
+
+    Firebase.RTDB.setString(&fbdo,
+      "/SmartHome/feedback/device2",
+      relayState ? "ON" : "OFF");
+  }
+
+  // -------- BUZZER --------
+  if (Firebase.RTDB.getInt(&fbdo, "/SmartHome/buzzerState")) {
+    int buzzerState = fbdo.intData();
+    digitalWrite(BUZZER_PIN, buzzerState);
+
+    Firebase.RTDB.setString(&fbdo,
+      "/SmartHome/feedback/buzzer",
+      buzzerState ? "ON" : "OFF");
+  }
+
+  delay(100);
+}
