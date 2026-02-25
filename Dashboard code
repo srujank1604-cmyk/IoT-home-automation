@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Smart Home Automation</title>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+
+<style>
+body{
+background:#0b0f1a;
+color:#fff;
+font-family:Segoe UI,Arial;
+text-align:center;
+}
+
+h1{
+margin-top:40px;
+font-size:42px;
+letter-spacing:2px;
+color:#00fff7;
+}
+
+.container{
+display:flex;
+justify-content:center;
+gap:40px;
+margin-top:80px;
+}
+
+.card{
+background:rgba(255,255,255,0.05);
+backdrop-filter:blur(12px);
+padding:40px;
+width:220px;
+border-radius:20px;
+box-shadow:0 0 20px rgba(0,255,255,0.15);
+transition:0.3s;
+}
+
+.card:hover{
+transform:scale(1.05);
+}
+
+.status{
+font-size:20px;
+margin:15px 0;
+}
+
+.on{
+color:#00ff6a;
+text-shadow:0 0 12px #00ff6a;
+}
+
+.off{
+color:#ff3b3b;
+text-shadow:0 0 12px #ff3b3b;
+}
+
+button{
+padding:12px 28px;
+border:none;
+border-radius:30px;
+font-size:16px;
+cursor:pointer;
+background:#00fff7;
+color:#000;
+box-shadow:0 0 15px #00fff7;
+transition:0.3s;
+}
+
+button:hover{
+box-shadow:0 0 30px #00fff7;
+}
+
+</style>
+</head>
+
+<body>
+
+<h1>SMART HOME CONTROL</h1>
+
+<div class="container">
+
+<div class="card">
+<h2>Light</h2>
+<div id="lightStatus" class="status off">OFF</div>
+<button onclick="toggleDevice('device1State')">Toggle</button>
+</div>
+
+<div class="card">
+<h2>Fan</h2>
+<div id="fanStatus" class="status off">OFF</div>
+<button onclick="toggleDevice('device2State')">Toggle</button>
+</div>
+
+<div class="card">
+<h2>Buzzer</h2>
+<div id="buzzerStatus" class="status off">OFF</div>
+<button onclick="toggleDevice('buzzerState')">Toggle</button>
+</div>
+
+</div>
+
+<script>
+
+var firebaseConfig = {
+databaseURL: "https://smarthomeautomation-cb002-default-rtdb.firebaseio.com/"
+};
+
+firebase.initializeApp(firebaseConfig);
+var db = firebase.database();
+
+const devices = {
+device1State:"lightStatus",
+device2State:"fanStatus",
+buzzerState:"buzzerStatus"
+};
+
+Object.keys(devices).forEach(device=>{
+db.ref("SmartHome/"+device).on("value",snap=>{
+let val=snap.val();
+let el=document.getElementById(devices[device]);
+
+if(val==1){
+el.innerHTML="ON";
+el.className="status on";
+}else{
+el.innerHTML="OFF";
+el.className="status off";
+}
+});
+});
+
+function toggleDevice(device){
+let ref=db.ref("SmartHome/"+device);
+ref.once("value").then(snap=>{
+ref.set(snap.val()==1?0:1);
+});
+}
+
+</script>
+</body>
+</html>
